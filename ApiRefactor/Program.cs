@@ -18,7 +18,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandler("/error");
+
+app.Map("/error", () =>
+{
+    return Results.Problem(
+        title: "Unexpected error",
+        detail: "An unexpected error occurred while processing the request",
+        statusCode: 500
+    );
+});
+
 app.UseHttpsRedirection();
+
 
 
 app.MapGet("/api/waves", async (IWaveService service) =>
