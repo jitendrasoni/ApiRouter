@@ -1,8 +1,15 @@
 using ApiRefactor.Models;
 using ApiRefactor.Repositories;
 using ApiRefactor.Services;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/app-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -31,8 +38,6 @@ app.Map("/error", () =>
 
 app.UseHttpsRedirection();
 
-
-
 app.MapGet("/api/waves", async (IWaveService service) =>
 {
     var waves = await service.GetWavesAsync();
@@ -42,13 +47,35 @@ app.MapGet("/api/waves", async (IWaveService service) =>
 app.MapGet("/api/waves/{id}", async (Guid id, IWaveService service) =>
 {
     var wave = await service.GetWaveAsync(id);
-    return wave is null ? Results.NotFound() : Results.Ok(wave);
+    return wave is null
+        ? Results.NotFound(new { message = $"Wave {id} not found" })
+        : Results.Ok(wave);
 });
 
 app.MapPost("/api/waves", async (Wave wave, IWaveService service) =>
 {
-    await service.UpsertWaveAsync(wave);
-    return Results.Ok();
+    if (wave == null)
+        return Results.BadRequest("Request body is required");
+
+    if (string.IsNullOrWhiteSpace(wave.Name))
+        return Results.BadRequest("Wave name is required");
+
+    try
+    {
+        var isNew = wave.Id == Guid.Empty;
+        if (isNew)
+            wave.Id = Guid.NewGuid();
+
+        await service.UpsertWaveAsync(wave);
+
+        return Results.Created($"/api/waves/{wave.Id}", wave);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(ex.Message);
+    }
 });
+
+app.Lifetime.ApplicationStopped.Register(Log.CloseAndFlush);
 
 app.Run();
