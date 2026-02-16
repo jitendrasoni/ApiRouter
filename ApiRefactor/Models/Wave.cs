@@ -9,13 +9,14 @@ public class Waves
     public Waves()
     {
         Items = new List<Wave>();
-        SqliteConnection connection = SqlConnection.GetSqlConnection();
+
+        using var connection = SqlConnection.GetSqlConnection();
         connection.Open();
 
-        var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = "select id from waves";
 
-        SqliteDataReader reader = command.ExecuteReader();
+        using var reader = command.ExecuteReader();
         while (reader.Read())
         {
             var id = Guid.Parse(reader["id"].ToString());
@@ -38,36 +39,34 @@ public class Wave
 
     public Wave(Guid id)
     {
-        SqliteConnection connection = SqlConnection.GetSqlConnection();
+        using var connection = SqlConnection.GetSqlConnection();
         connection.Open();
 
-        var command = connection.CreateCommand();
+        using var command = connection.CreateCommand();
         command.CommandText = "select * from waves where id = @id";
         command.Parameters.AddWithValue("@id", id);
 
-        SqliteDataReader reader = command.ExecuteReader();
+        using var reader = command.ExecuteReader();
         if (reader.Read())
         {
             Id = Guid.Parse(reader["id"].ToString());
             Name = reader["name"].ToString();
             WaveDate = DateTime.Parse(reader["wavedate"].ToString());
         }
-
-        connection.Close();
     }
 
     public void Save()
     {
-        SqliteConnection connection = SqlConnection.GetSqlConnection();
+        using var connection = SqlConnection.GetSqlConnection();
         connection.Open();
 
-        var command = connection.CreateCommand();
-        var saveCommand = connection.CreateCommand();
+        using var command = connection.CreateCommand();
+        using var saveCommand = connection.CreateCommand();
 
         command.CommandText = "select * from waves where id = @id";
         command.Parameters.AddWithValue("@id", Id);
 
-        SqliteDataReader reader = command.ExecuteReader();
+        using var reader = command.ExecuteReader();
         if (!reader.Read())
         {
             saveCommand.CommandText =
@@ -86,7 +85,5 @@ public class Wave
         }
 
         saveCommand.ExecuteNonQuery();
-
-        connection.Close();
     }
 }
