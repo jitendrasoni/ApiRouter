@@ -42,7 +42,8 @@ public class Wave
         connection.Open();
 
         var command = connection.CreateCommand();
-        command.CommandText = "select * from waves where id = '" + id + "'";
+        command.CommandText = "select * from waves where id = @id";
+        command.Parameters.AddWithValue("@id", id);
 
         SqliteDataReader reader = command.ExecuteReader();
         if (reader.Read())
@@ -62,16 +63,26 @@ public class Wave
 
         var command = connection.CreateCommand();
         var saveCommand = connection.CreateCommand();
-        command.CommandText = "select * from waves where id = '" + Id + "'";
+
+        command.CommandText = "select * from waves where id = @id";
+        command.Parameters.AddWithValue("@id", Id);
 
         SqliteDataReader reader = command.ExecuteReader();
         if (!reader.Read())
         {
-            saveCommand.CommandText = "insert into waves (id, name, wavedate) values ('" + Id + "', '" + Name + "', '" + WaveDate + "')";
+            saveCommand.CommandText =
+            "insert into waves (id, name, wavedate) values (@id, @name, @date)";
+            saveCommand.Parameters.AddWithValue("@id", Id);
+            saveCommand.Parameters.AddWithValue("@name", Name);
+            saveCommand.Parameters.AddWithValue("@date", WaveDate);
         }
         else
         {
-            saveCommand.CommandText = "update waves set name = '" + Name + "', wavedate = '" + WaveDate + "' where id = '" + Id + "'";
+            saveCommand.CommandText =
+            "update waves set name=@name, wavedate=@date where id=@id";
+            saveCommand.Parameters.AddWithValue("@id", Id);
+            saveCommand.Parameters.AddWithValue("@name", Name);
+            saveCommand.Parameters.AddWithValue("@date", WaveDate);
         }
 
         saveCommand.ExecuteNonQuery();
