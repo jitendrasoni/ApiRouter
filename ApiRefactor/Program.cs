@@ -1,10 +1,17 @@
 using ApiRefactor.Models;
+using ApiRefactor.Repositories;
+using ApiRefactor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<IWaveRepository, WaveRepository>();
+builder.Services.AddScoped<IWaveService, WaveService>();
+
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -13,16 +20,23 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/wave", () => new Waves())
-    .WithName("GetWaves")
-    .WithOpenApi();
 
-app.MapGet("/api/wave/{id}", (Guid id) => new Wave(id))
-    .WithName("GetWaveById")
-    .WithOpenApi();
+app.MapGet("/api/waves", async (IWaveService service) =>
+{
+    var waves = await service.GetWavesAsync();
+    return Results.Ok(waves);
+});
 
-app.MapPost("/api/wave", (Wave wave) => { wave.Save(); })
-    .WithName("UpsertWave")
-    .WithOpenApi();
+app.MapGet("/api/waves/{id}", async (Guid id, IWaveService service) =>
+{
+    var wave = await service.GetWaveAsync(id);
+    return wave is null ? Results.NotFound() : Results.Ok(wave);
+});
+
+app.MapPost("/api/waves", async (Wave wave, IWaveService service) =>
+{
+    await service.UpsertWaveAsync(wave);
+    return Results.Ok();
+});
 
 app.Run();
